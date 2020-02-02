@@ -1,9 +1,11 @@
 import React, { Component } from 'react';
 import axios from 'axios';
 import './ScheduleList.css';
-import { Link, Route } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 class ScheduleList extends Component {
+  today = new Date();
+
   constructor(props) {
     super(props);
     this.state = {
@@ -15,11 +17,22 @@ class ScheduleList extends Component {
     this.getShowSchedules(this.props.default);
   }
 
+  getFormattedDate() {
+    let month = this.today.getMonth();
+    if (month < 10) {
+      month = `0${month}`
+    }
+    let day = this.today.getDate();
+    if (day < 10) {
+      day = `0${day}`
+    }
+    return `${this.today.getFullYear()}-${month}-${day}`;
+  }
+
   getShowSchedules(url) {
     this.setState({ schedules: [] });
-
     // Fetch TV Schedules from tv maze api
-    axios.get(`http://api.tvmaze.com/schedule?country=US&date=2020-02-01`)
+    axios.get(`http://api.tvmaze.com/schedule?country=US&date=${this.getFormattedDate()}`)
       .then((response) => {
         const data = response.data;
         this.setState({ schedules: data });
@@ -29,7 +42,6 @@ class ScheduleList extends Component {
   }
 
   render() {
-
     // Show Schedule List
     const scheduleList = this.state.schedules;
     let scheduleView = <div>Loading...</div>
@@ -41,10 +53,11 @@ class ScheduleList extends Component {
       ))
     }
 
+    // Render views
     return (
       <div className="container">
         <div className="row">
-          <br />
+          <h5>For {this.getFormattedDate()} </h5>
           {scheduleView}
         </div>
       </div>

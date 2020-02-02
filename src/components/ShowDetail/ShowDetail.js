@@ -1,52 +1,111 @@
-import React, { Component } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './ShowDetail.css';
+import { makeStyles } from '@material-ui/core/styles';
+import Card from '@material-ui/core/Card';
+import CardHeader from '@material-ui/core/CardHeader';
+import CardMedia from '@material-ui/core/CardMedia';
+import CardContent from '@material-ui/core/CardContent';
+import CardActions from '@material-ui/core/CardActions';
+import Typography from '@material-ui/core/Typography';
+import { red } from '@material-ui/core/colors';
+import Button from '@material-ui/core/Button';
+import KeyboardArrowLeft from '@material-ui/icons/KeyboardArrowLeft';
+import MobileStepper from '@material-ui/core/MobileStepper';
+import { Link } from "react-router-dom";
 
-class ShowDetail extends Component {
-  showId = null;
-  showDetailApi = 'http://api.tvmaze.com/shows';
-  constructor(props) {
-    super(props);
-    this.showId = this.props.match.params.id;
-    this.state = {
-      showMetadata: null
-    };
+
+const useStyles = makeStyles(theme => ({
+  card: {
+    maxWidth: 400,
+    maxHeight: 1000
+  },
+  media: {
+    height: 0,
+    paddingTop: '56.25%', // 16:9
+  },
+  expand: {
+    transform: 'rotate(0deg)',
+    marginLeft: 'auto',
+    transition: theme.transitions.create('transform', {
+      duration: theme.transitions.duration.shortest,
+    }),
+  },
+  expandOpen: {
+    transform: 'rotate(180deg)',
+  },
+  avatar: {
+    backgroundColor: red[500],
+  },
+}));
+
+function tConvert(time) {
+  // Check correct time format and split into components
+  time = time.toString().match(/^([01]\d|2[0-3])(:)([0-5]\d)(:[0-5]\d)?$/) || [time];
+
+  if (time.length > 1) { // If time format correct
+    time = time.slice(1);  // Remove full string match value
+    time[5] = +time[0] < 12 ? 'AM' : 'PM'; // Set AM/PM
+    time[0] = +time[0] % 12 || 12; // Adjust hours
   }
-
-  componentDidMount() {
-    this.fetchShowMetadata();
-  }
-
-  fetchShowMetadata() {
-    this.setState({ showMetadata: null });
-    // Fetch show metadata from tv maze api
-    axios.get(`${this.showDetailApi}/${this.showId}`)
-      .then((result) => {
-        this.setState({ showMetadata: result.data });
-      })
-      .catch((e) => {
-        console.error(e)
-      });
-  }
-
-  render() {
-    let showMetadataView = <div>Loading...</div>;
-    if (this.state.showMetadata) {
-      let showMetadata = this.state.showMetadata;
-      showMetadataView = <div >
-        <span className="detailRow">Show Name: {showMetadata.name}</span><br />
-        <span className="detailRow">Air Time: {showMetadata.schedule.time} </span><br />
-        <span className="detailRow">Duration: {showMetadata.runtime} Minutes</span><br />
-        <span className="detailRow">Rating: {showMetadata.rating.average}/10</span><br />
-        <span className="detailRow">Description: {showMetadata.summary} }</span><br />
-      </div >
-    }
-
-    return (
-      <div >
-        {showMetadataView}
-      </div>
-    )
-  }
+  return time.join(''); // return adjusted time or original string
 }
-export default ShowDetail;
+
+export default function ShowDetail(props) {
+  const [state, setState] = useState({
+    metadata: null
+  });
+
+  // prep variables
+  const showId = props.match.params.id;
+  const showMetadataDetailApi = `http://api.tvmaze.com/shows/${showId}`;
+  const classes = useStyles(); // Fetch classess
+
+  // Fetch show metadata
+  useEffect(() => {
+    axios.get(showMetadataDetailApi)
+      .then((result) => {
+        setState({ metadata: result.data })
+      }).catch((e) => console.error(e));
+  }, [showMetadataDetailApi])
+
+  // Render views
+  if (!state.metadata)
+    return <div>Loading...</div>;
+  else {
+    return (
+      <Card className={classes.card}>
+        <CardHeader
+          title={state.metadata.name}
+          subheader={'Duration: ' + state.metadata.runtime + ' minutes'}
+        />
+        <CardMedia
+          className={classes.media}
+          image={state.metadata.image ? state.metadata.image.original : null}
+        />
+        <CardContent>
+          <Typography variant="h5" color="textSecondary" component="p">
+            {state.metadata.schedule.time ? 'Airtime - ' + tConvert(state.metadata.schedule.time) : null}<br />
+            {state.metadata.rating.average ? 'Rating - ' + state.metadata.rating.average + ` / 10` : null}
+          </Typography>
+          <Typography variant="body2" color="textSecondary" component="p">
+            {state.metadata.summary}
+          </Typography>
+        </CardContent>
+        <CardActions disableSpacing>
+          <MobileStepper
+            steps={0}
+            backButton={
+              <Link to="/" className="navbar-brand">
+                <Button size="small"  >
+                  {<KeyboardArrowLeft />}
+                  Back
+                </Button>
+              </Link>
+            }
+          />
+        </CardActions>
+      </Card>
+    );
+  }
+};
